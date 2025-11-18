@@ -1,3 +1,7 @@
+import java.sql.Connection;
+import java.sql.DatabaseMetaData;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,6 +20,10 @@ public final class MainProgram {
     private MainProgram() {
         // no code needed here
     }
+    /*
+     * Path to the database file
+     */
+    private static final String DATABASE = "ProjectDatabaseUpdated.db";
 
     /**
      * This variable is used as a key for which string means what in the
@@ -389,30 +397,61 @@ public final class MainProgram {
     }
 
     /**
-     * Main method.
-     *
-     * @param args
-     *            the command line arguments; unused here
+     * Taken from the in-class Lab 3 example.
+     * 
+     * Connects to the database if it exists, creates it if it does not, and returns the connection object.
+     * 
+     * @param databaseFileName the database file name
+     * @return a connection object to the designated database
      */
-    public static void main(String[] args) {
+    public static Connection initializeDB(String databaseFileName) {
+
+        String url = "jdbc:sqlite:" + databaseFileName;
+
+        Connection conn = null; // If you create this variable inside the Try block it will be out of scope
+        try {
+            conn = DriverManager.getConnection(url);
+            if (conn != null) {
+            	// Provides some positive assurance the connection and/or creation was successful.
+                DatabaseMetaData meta = conn.getMetaData();
+                System.out.println("The driver name is " + meta.getDriverName());
+                System.out.println("The connection to the database was successful.");
+            } else {
+            	// Provides some feedback in case the connection failed but did not throw an exception.
+            	System.out.println("Null Connection");
+            }
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+            System.out.println("There was a problem connecting to the database.");
+        }
+        return conn;
+    }
+    /*
+     * The Method that prints the main menu
+     * 
+     * @param cin Scanner object for input
+     * 
+     */
+
+    public static void printMainMenu(Scanner cin) {
         // Create all necessary maps so far
         Map<String, String[]> customers = new HashMap<>();
         Map<String, String[]> warehouse = new HashMap<>();
-        Scanner readIn = new Scanner(System.in);
+
         // Welcome the user
         System.out.println("Hello! Welcome to the Database Application");
         int option = 0;
         while (option >= 0) {
             printOptions();
             // Call parse options with 5 as the number of options for the main prompt
-            option = parseOption(readIn, 7);
+            option = parseOption(cin, 7);
             if (option > 0) {
                 switch (option) {
                     case 1:
                         // This option is for Customers
                         printOptionsCustomer();
-                        int optionCustomer = parseOption(readIn, 4);
-                        processCustomerRequest(optionCustomer, readIn, customers);
+                        int optionCustomer = parseOption(cin, 4);
+                        processCustomerRequest(optionCustomer, cin, customers);
                         break;
                     case 2:
                         // This option is for Drones
@@ -420,8 +459,8 @@ public final class MainProgram {
                     case 3:
                         // This option is for Equipment
                         printOptionsEquipment();
-                        int optionEquipment = parseOption(readIn, 4);
-                        processEquipmentRequest(optionEquipment, readIn);
+                        int optionEquipment = parseOption(cin, 4);
+                        processEquipmentRequest(optionEquipment, cin);
                         break;
                     case 4:
                         // This option is for Orders
@@ -432,8 +471,8 @@ public final class MainProgram {
                     case 6:
                         // This option is for Warehouse
                         printOptionsWarehouse();
-                        int optionWarehouse = parseOption(readIn, 4);
-                        processWarehouseRequest(optionWarehouse, readIn, warehouse);
+                        int optionWarehouse = parseOption(cin, 4);
+                        processWarehouseRequest(optionWarehouse, cin, warehouse);
                         break;
                     case 7:
                         // This option is for Useful Reports
@@ -444,8 +483,27 @@ public final class MainProgram {
 
             }
         }
-
-        readIn.close();
     }
 
+    /**
+     * Main method.
+     *
+     * @param args
+     *            the command line arguments; unused here
+     */
+    public static void main(String[] args) {
+        Connection dbConnection = initializeDB(DATABASE);
+
+        Scanner cin = new Scanner(System.in);
+        printMainMenu(cin);
+        cin.close();
+
+        try {
+			dbConnection.close();
+		} catch (SQLException e) {
+			System.err.println(e.getMessage());
+		}
+
+        System.out.println("Bye");
+    }
 }
