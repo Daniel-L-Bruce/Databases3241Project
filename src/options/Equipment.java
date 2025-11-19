@@ -1,11 +1,84 @@
 package options;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 
 import app.MainProgram;
 
+import sql.SQL;
+
 public class Equipment {
+
     
+
+    /**
+     * Checks if the input string contains suspicious SQL injection characters/patterns.
+     *
+     * @param input The string to check
+     * @return true if suspicious content is found, false otherwise
+     */
+    public static boolean containsSqlInjectionRisk(String input) {
+        // List of suspicious substrings often used in SQL injection
+        List<String> sqlInjectionList = Arrays.asList(
+        "--", ";", "'", "\"", "/*", "*/",
+        "drop", "delete", "insert", "update", "select",
+        "exec", "execute", "alter", "create", "shutdown"
+        );
+        if (input == null) return false;
+
+        String lowerInput = input.toLowerCase();
+        for (String pattern : sqlInjectionList) {
+            if (lowerInput.contains(pattern)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Prompt the user for a date string in MM/DD/YYYY format.
+     * @param scanner
+     * @return 
+     *          the date string
+     */
+    public static String promptForDateString(Scanner scanner) {
+        String date = null;
+        // Create regex for date validation to ensure MM/DD/YYYY format with valid month/day
+        String regex = "^(0[1-9]|1[0-2])/([0-2][0-9]|3[01])/\\d{4}$";
+
+        while (date == null) {
+            System.out.print("Please enter the date MM/DD/YYYY: ");
+            String input = scanner.nextLine();
+        // Validate input against regex until valid date is entered
+            if (input.matches(regex)) {
+                date = input;
+            } else {
+                System.out.println("Invalid date format. Please try again.");
+            }
+        }
+
+        return date;
+    }
+        
+    /**
+     * This function will read in the integer entered, return it if valid, or -1
+     * if not.
+     *
+     * @param readIn
+     *            Scanner object where to read in the value
+     * @return The integer read in if valid, -1 if not
+     */
+    public static int parseNumber(Scanner readIn) {
+        // If the option read in is not one of the 5, return negative one
+        try {
+            int num = Integer.parseInt(readIn.nextLine());
+            return num;
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
     /**
      * This function simply prints out the options for the equipment available
      * to the user.
@@ -34,12 +107,7 @@ public class Equipment {
         switch (option) {
             case 1:
                 // This option is for renting equipment;
-                System.out.print(
-                        "Please enter the serial number of the peice of equipment you wish to rent: ");
-                // Grab the number entered as the serial number
-                equipmentSerialNumber = MainProgram.parseNumber(readIn);
-                System.out.println("You have selected to rent: " + equipmentSerialNumber);
-                // More to come in future.
+                createOrder(readIn);
                 break;
             case 2:
                 // This option is for return equipment;
@@ -86,4 +154,34 @@ public class Equipment {
                 // Do not do anything
         }
     }
+
+    public static void createOrder(Scanner in) {
+        // Get information for the new order by prompting user
+        System.out.println("Please enter the serial number of the equipment: ");
+        String equipmentSerialNumber = in.nextLine();
+        while (!SQL.isInEquipment(equipmentSerialNumber) || containsSqlInjectionRisk(equipmentSerialNumber)) {
+            System.out.println(
+                    "The serial number you entered does not exist in the equipment table. Please enter a valid serial number: ");
+            equipmentSerialNumber = in.nextLine();
+        }
+        System.out.println("Please enter the quantity: ");
+        int quantity = parseNumber(in);
+        while (quantity < 1) {
+            System.out
+                    .println("The quantity must be at least 1. Please enter a valid quantity: ");
+            quantity = parseNumber(in);
+        }
+        String date = promptForDateString(in);
+        System.out.println("When do you need the order delivered by?");
+        String deliveryDate = promptForDateString(in);
+        // Grab the equipment type and warehouse ID for the order from the database for the order
+        String type = SQL.getEquipmentType(equipmentSerialNumber);
+        int warehouseID = SQL.getWarehouseIDForEquipment(equipmentSerialNumber);
+        // Create the order in the database
+        String[] orderData = { type, Integer.toString(quantity), deliveryDate, date, equipmentSerialNumber, Integer.toString(warehouseID) };
+        String query = "INSERT INTO orders (element_type, quantity, estimated_arrival_date, date, serial_number, warehouse_id) VALUES (?, ?, ?, ?, ?, ?)";
+        SQL.ps_CreateOrder(query, orderData);
+    }
 }
+
+

@@ -1,0 +1,27 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "MainProgram",
+            "request": "launch",
+            "mainClass": "app.MainProgram",
+            "projectName": "Databases3241Project_87c4047f"
+        },
+        {
+            "type": "java",
+            "name": "Run MainProgram",
+            "request": "launch",
+            "mainClass": "app.MainProgram",
+            "projectName": "Databases-3241-Project",
+            "classPaths": [
+                "${workspaceFolder}/bin",
+                "${workspaceFolder}/lib/sqlite-jdbc-3.32.3.2 (1).jar"
+            ],
+            "vmArgs": "--enable-preview -XX:+ShowCodeDetailsInExceptionMessages"
+        }
+    ]
+}

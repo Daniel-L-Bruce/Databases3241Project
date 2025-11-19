@@ -28,7 +28,7 @@ public final class MainProgram {
     /*
      * Path to the database file
      */
-    private static final String DATABASE = "Databases-3241-Project/ProjectDatabaseUpdated.db";
+    private static final String DATABASE = "RentalSystem.db";
 
     /**
      * This function simply prints out the options available to the user.
