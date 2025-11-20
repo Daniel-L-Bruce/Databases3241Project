@@ -198,7 +198,7 @@ public class UsefulReports {
      * 6) Equipment by Type: find equipment descriptions by type released before a given year.
      */
     private static void equipmentByTypeBeforeYear(Scanner in) {
-        System.out.print("Please enter the equipment type (e.g., conveyor, forklift): ");
+        System.out.print("Please enter the equipment type");
         String type = in.nextLine();
         while (type == null || type.trim().isEmpty()) {
             System.out.print("Type cannot be empty. Please enter the equipment type: ");
