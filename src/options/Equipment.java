@@ -70,7 +70,7 @@ public class Equipment {
      * @return The integer read in if valid, -1 if not
      */
     public static int parseNumber(Scanner readIn) {
-        // If the option read in is not one of the 5, return negative one
+        // If the option read in is not able to be an int, return negative one
         try {
             int num = Integer.parseInt(readIn.nextLine());
             return num;
@@ -107,55 +107,30 @@ public class Equipment {
         switch (option) {
             case 1:
                 // This option is for renting equipment;
-                createOrder(readIn);
+                createRental(readIn);
                 break;
             case 2:
                 // This option is for return equipment;
-                System.out.print(
-                        "Please enter the serial number of the peice of equipment you wish to return: ");
-                // Grab the number entered as the serial number
-                equipmentSerialNumber = MainProgram.parseNumber(readIn);
-                System.out
-                        .println("You have selected to return: " + equipmentSerialNumber);
-                // More to come in future.
+                registerReturn(readIn);
                 break;
             case 3:
                 // This option is for delivery of equipment;
-                System.out.print(
-                        "Please enter the serial number of the peice of equipment you wish to get delivered: ");
-                // Grab the number entered as the serial number
-                equipmentSerialNumber = MainProgram.parseNumber(readIn);
-                System.out.print(
-                        "Please enter the serial number of the drone you wish to do the delivery: ");
-                // Grab the number entered as the serial number
-                droneSerialNumber = MainProgram.parseNumber(readIn);
-                System.out.println("You have selected to deliver the equipment: "
-                        + equipmentSerialNumber);
-                System.out.println("You have selected to have this drone deliver: "
-                        + droneSerialNumber);
-                // More to come in future.
+                scheduleDelivery(readIn);
                 break;
             case 4:
                 // This option is for pickup of equipment;
-                System.out.print(
-                        "Please enter the serial number of the peice of equipment you wish to get picked up: ");
-                // Grab the number entered as the serial number
-                equipmentSerialNumber = MainProgram.parseNumber(readIn);
-                System.out.print(
-                        "Please enter the serial number of the drone you wish to do the pickup the equipment: ");
-                // Grab the number entered as the serial number
-                droneSerialNumber = MainProgram.parseNumber(readIn);
-                System.out.println("You have selected to pickup the equipment: "
-                        + equipmentSerialNumber);
-                System.out.println("You have selected to have this drone pickup: "
-                        + droneSerialNumber);
+                schedulePickup(readIn);
                 break;
             default:
                 // Do not do anything
         }
     }
 
-    public static void createOrder(Scanner in) {
+    /**
+     * Create a rental record in the database by asking the user for correct information.
+     * @param in 
+     */
+    public static void createRental(Scanner in) {
         // Get information for the new order by prompting user
         System.out.println("Please enter the serial number of the equipment: ");
         String equipmentSerialNumber = in.nextLine();
@@ -164,23 +139,99 @@ public class Equipment {
                     "The serial number you entered does not exist in the equipment table. Please enter a valid serial number: ");
             equipmentSerialNumber = in.nextLine();
         }
-        System.out.println("Please enter the quantity: ");
-        int quantity = parseNumber(in);
-        while (quantity < 1) {
+        // Ask user for email and then find the customer ID with that email
+        System.out.println("Please enter your customer registered email: ");
+        String email = in.nextLine();
+        while (!sql.SQL.isEmailInCustomer(email) || containsSqlInjectionRisk(email)) {
             System.out
                     .println("The quantity must be at least 1. Please enter a valid quantity: ");
-            quantity = parseNumber(in);
+            email = in.nextLine();
         }
+        int customerID = SQL.getCustomerIdFromEmail(email);
+        // Ask user for the date
         String date = promptForDateString(in);
-        System.out.println("When do you need the order delivered by?");
-        String deliveryDate = promptForDateString(in);
-        // Grab the equipment type and warehouse ID for the order from the database for the order
-        String type = SQL.getEquipmentType(equipmentSerialNumber);
-        int warehouseID = SQL.getWarehouseIDForEquipment(equipmentSerialNumber);
         // Create the order in the database
-        String[] orderData = { type, Integer.toString(quantity), deliveryDate, date, equipmentSerialNumber, Integer.toString(warehouseID) };
-        String query = "INSERT INTO orders (element_type, quantity, estimated_arrival_date, date, serial_number, warehouse_id) VALUES (?, ?, ?, ?, ?, ?)";
-        SQL.ps_CreateOrder(query, orderData);
+        String[] orderData = {date, Integer.toString(customerID), equipmentSerialNumber};
+        String query = "INSERT INTO RENTALS (date_rented, customer_id, serial_number) VALUES (?, ?, ?)";
+        SQL.ps_CreateRental(query, orderData);
+        System.out.println("Rental created successfully! Please schedule a delivery for the equipment.");
+    }
+
+
+    /**
+     * Register the return of a rental in the database by asking the user for correct information.
+     * @param in 
+     */
+    public static void registerReturn(Scanner in) {
+        // Get information for the return by prompting user
+        System.out.println("Please enter the Rental Number of the equipment being returned: ");
+        int rentalNumber = parseNumber(in);
+        while (rentalNumber < 0 || !SQL.isInRental(rentalNumber)) {
+            System.out.println(
+                    "The rental number you entered does not exist in the rentals table. Please enter a valid rental number: ");
+            rentalNumber = parseNumber(in);
+        }
+        // Ask user for the date
+        String returnDate = promptForDateString(in);
+        // Register the return in the database
+        String query = "UPDATE RENTALS SET date_returned = ? WHERE rental_number = ?";
+        SQL.ps_RegisterReturn(query, returnDate, rentalNumber);
+        System.out.println("Return registered successfully! Please schedule a pickup for the equipment.");
+    }
+
+    /**
+     * Schedule a delivery for a rental in the database by asking the user for correct information.
+     * @param in
+     */
+    public static void scheduleDelivery(Scanner in) {
+        // Get information for the delivery by prompting user
+        System.out.println("Please enter the Rental Number of the equipment being delivered: ");
+        int rentalNumber = parseNumber(in);
+        while (rentalNumber < 0 || !SQL.isInRental(rentalNumber)) {
+            System.out.println(
+                    "The rental number you entered does not exist in the rentals table. Please enter a valid rental number: ");
+            rentalNumber = parseNumber(in);
+        }
+        // Ask the user for the drone serial number they wish to complete the delivery
+        System.out.println("Please enter the serial number of the drone to deliver the equipment: ");
+        String droneSerialNumber = in.nextLine();
+        while (!SQL.isInDrone(droneSerialNumber) || containsSqlInjectionRisk(droneSerialNumber)) {
+            System.out.println(
+                    "The serial number you entered does not exist in the drone table. Please enter a valid serial number: ");
+            droneSerialNumber = in.nextLine();
+        }
+        // Grab the customer ID from the rental number
+        int customerID = SQL.getCustomerIdFromRental(rentalNumber);
+        // Schedule the delivery in the database
+        String SQL = "INSERT INTO DELIVER_TO VALUES (?, ?, ?);";
+        sql.SQL.ps_ScheduleDelivery(SQL, droneSerialNumber, customerID, rentalNumber);
+        System.out.println("Delivery scheduled successfully!");
+    }
+
+
+    public static void schedulePickup(Scanner in) {
+        // Get information for the pickeup by prompting user
+        System.out.println("Please enter the Rental Number of the equipment being picked up: ");
+        int rentalNumber = parseNumber(in);
+        while (rentalNumber < 0 || !SQL.isInRental(rentalNumber)) {
+            System.out.println(
+                    "The rental number you entered does not exist in the rentals table. Please enter a valid rental number: ");
+            rentalNumber = parseNumber(in);
+        }
+        // Ask the user for the drone serial number they wish to complete the delivery
+        System.out.println("Please enter the serial number of the drone to pick up the equipment: ");
+        String droneSerialNumber = in.nextLine();
+        while (!SQL.isInDrone(droneSerialNumber) || containsSqlInjectionRisk(droneSerialNumber)) {
+            System.out.println(
+                    "The serial number you entered does not exist in the drone table. Please enter a valid serial number: ");
+            droneSerialNumber = in.nextLine();
+        }
+        // Grab the customer ID from the rental number
+        int customerID = SQL.getCustomerIdFromRental(rentalNumber);
+        // Schedule the delivery in the database
+        String SQL = "INSERT INTO PICKUP_RENTAL VALUES (?, ?, ?);";
+        sql.SQL.ps_ScheduleDelivery(SQL, droneSerialNumber, customerID, rentalNumber);
+        System.out.println("Pickup scheduled successfully!");
     }
 }
 
