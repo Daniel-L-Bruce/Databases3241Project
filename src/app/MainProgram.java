@@ -171,7 +171,10 @@ public final class MainProgram {
                         Warehouse.processWarehouseRequest(optionWarehouse, cin, warehouse);
                         break;
                     case 7:
-                        // This option is for Useful Reports
+                         // This option is for Useful Reports
+                        UsefulReports.printOptionsUsefulReports();
+                        int optionUseful = parseOption(cin, 6);
+                        UsefulReports.processUsefulReportsRequest(optionUseful, cin);
                         break;
                     default:
                         // Do not do anything, just exit the program.
@@ -203,3 +206,4 @@ public final class MainProgram {
         System.out.println("Bye");
     }
 }
+
